@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5f8b">
+<title>Asistencia ASOPROAEBAO</title>
+<style>
+  :root { --bg:#f3f6f4; --card:#ffffff; --fg:#17231d; --muted:#5b6b63; --line:#d7e0db; --soft:#eaf0ec;
+          --ok:#1f7a4d; --ok-bg:#e3f3ea; --warn:#9a4a12; --warn-bg:#fdf0e3; --err:#b3261e; --err-bg:#fbe9e7; --accent:#1f5f8b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .wrap { max-width:460px; margin:0 auto; padding:20px 16px 40px; }
+  header small { color:var(--muted); text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
+  h1 { margin:2px 0 14px; font-size:21px; }
+  h3 { margin:0; font-size:16px; }
+  .tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; background:var(--soft); padding:4px; border-radius:10px; margin-bottom:14px; }
+  .tabs button { background:none; color:var(--muted); font-size:14px; padding:9px 4px; border-radius:7px; font-weight:600; }
+  .tabs button[aria-selected="true"] { background:var(--card); color:var(--fg); box-shadow:0 1px 2px rgba(0,0,0,.08); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; display:grid; gap:12px; }
+  label { font-size:14px; color:var(--muted); display:grid; gap:5px; }
+  input, select, textarea { font:inherit; font-size:17px; padding:11px; border:1px solid var(--line); border-radius:8px; width:100%; background:var(--card); color:var(--fg); }
+  textarea { min-height:80px; resize:vertical; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); border-color:transparent; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .check { display:flex; gap:8px; align-items:center; color:var(--fg); }
+  .check input { width:auto; }
+  button { font:inherit; font-weight:600; font-size:16px; padding:13px; border:0; border-radius:10px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; }
+  .sec { background:var(--card); color:var(--accent); border:1px solid var(--line); font-size:14px; padding:10px; }
+  .huella { display:flex; align-items:center; justify-content:center; gap:10px; padding:17px; font-size:17px; }
+  .huella svg { width:28px; height:28px; flex:none; }
+  .link { background:none; color:var(--accent); padding:0; font-size:14px; font-weight:500; text-align:left; }
+  .msg { padding:12px; border-radius:10px; font-size:15px; }
+  .err { background:var(--err-bg); color:var(--err); }
+  .info { background:var(--warn-bg); color:var(--warn); }
+  .okm { background:var(--ok-bg); color:var(--ok); }
+  .res { text-align:center; padding:20px 14px; border-radius:12px; }
+  .res.in { background:var(--ok-bg); color:var(--ok); }
+  .res.out { background:var(--warn-bg); color:var(--warn); }
+  .res.bad { background:var(--err-bg); color:var(--err); }
+  .alerta { background:var(--err); color:#fff; border-radius:12px; padding:14px; text-align:center; font-weight:800; font-size:20px; letter-spacing:.02em; }
+  .alerta small { display:block; font-size:14px; font-weight:600; opacity:.9; letter-spacing:0; }
+  .horario { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; text-align:center; font-size:12px; color:var(--muted); }
+  .horario b { display:block; font-size:16px; color:var(--fg); font-variant-numeric:tabular-nums; }
+  .res .tipo { font-size:24px; font-weight:800; letter-spacing:.03em; }
+  .res .hora { font-size:40px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .nota { font-size:13px; color:var(--muted); }
+  .lista { display:grid; gap:6px; font-size:14px; }
+  .item { display:flex; justify-content:space-between; gap:10px; border-top:1px solid var(--line); padding-top:6px; }
+  .item span:first-child { min-width:0; }
+  .chip { font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; white-space:nowrap; align-self:start; }
+  .chip.APROBADO, .chip.JUSTIFICADO, .chip.ok { background:var(--ok-bg); color:var(--ok); }
+  .chip.PENDIENTE, .chip.warn { background:var(--warn-bg); color:var(--warn); }
+  .chip.NEGADO, .chip.SIN, .chip.bad { background:var(--err-bg); color:var(--err); }
+  .medidor { display:grid; grid-template-columns:repeat(var(--n),1fr); gap:4px; }
+  .medidor i { height:8px; border-radius:4px; background:var(--soft); }
+  .medidor i.on { background:var(--err); }
+  .stat { display:grid; gap:6px; }
+  .stat b { font-size:15px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <small id="oficina">ASOPROAEBAO</small>
+    <h1>Control de asistencia</h1>
+  </header>
+
+  <div id="sinQR" class="card" hidden>
+    <div class="msg err">La primera vez debe escanear el QR impreso en la oficina. Después podrá usar el acceso directo en su celular.</div>
+  </div>
+  <div id="sinHuella" class="card" hidden>
+    <div class="msg err">Este celular no tiene lector de huella activo o el navegador no lo permite. Registre una huella en los ajustes del celular y abra esta página en Chrome (Android) o Safari (iPhone).</div>
+  </div>
+
+  <div id="app" hidden>
+    <label style="margin-bottom:12px">Cédula
+      <input id="cedula" inputmode="numeric" autocomplete="off" maxlength="13">
+    </label>
+    <button type="button" id="cambiar" class="link" style="margin:-6px 0 12px" hidden>No soy yo, cambiar cédula</button>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="marcar" aria-selected="true">Marcar</button>
+      <button role="tab" data-tab="permisos" aria-selected="false">Permisos</button>
+      <button role="tab" data-tab="historial" aria-selected="false">Mi historial</button>
+    </div>
+
+    <!-- MARCAR -->
+    <section id="t-marcar">
+      <form id="fMarcar" class="card">
+        <div class="horario"><span><b>08:30</b>Ingreso</span><span><b>12:30 – 13:30</b>Almuerzo</span><span><b>17:30</b>Salida</span></div>
+        <div id="vincBox" hidden>
+          <div class="msg info" style="margin-bottom:10px">Primera vez en este celular: <b id="vincNombre"></b>, ingrese el PIN que le dio Talento Humano para vincular su huella.</div>
+          <label>PIN para vincular<input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
+        </div>
+        <div id="motivoBox" hidden>
+          <div class="msg info" id="motivoTxt" style="margin-bottom:10px"></div>
+          <label>Motivo<textarea id="motivo" maxlength="300" placeholder="Ej.: terminar el informe de despacho"></textarea></label>
+        </div>
+        <button id="bMarcar" type="submit" class="huella">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 4.8A9 9 0 0 1 20.5 11"/><path d="M3.5 9.5a9 9 0 0 1 1.3-2.7"/><path d="M8 20.5c.8-1.7 1.3-3.7 1.3-5.8a2.7 2.7 0 0 1 5.4 0c0 .7 0 1.4-.1 2"/><path d="M5.5 18.3A11.6 11.6 0 0 0 6.6 14.7a5.4 5.4 0 0 1 10.8 0c0 2-.3 3.9-.9 5.6"/><path d="M12 14.7c0 2.8-.8 5.3-2.2 7.3"/><path d="M20.4 15.8c.1-.4.1-.7.1-1.1"/></svg>
+          <span id="bMarcarTxt">Registrar marca con huella</span>
+        </button>
+        <div class="row2">
+          <button type="button" class="sec" data-especial="SALIDA CON PERMISO">Salida con permiso</button>
+          <button type="button" class="sec" data-especial="REGRESO DE PERMISO">Regreso de permiso</button>
+        </div>
+        <div class="nota">Use estos dos botones solo si tiene un permiso por horas aprobado para hoy (Art. 30).</div>
+        <div class="nota" id="estMarcar">Se verificará que esté en la oficina y luego se le pedirá la huella.</div>
+        <div id="errMarcar" class="msg err" hidden></div>
+      </form>
+
+      <div id="okMarcar" class="card" hidden>
+        <div class="alerta" id="rAlerta" hidden></div>
+        <div class="res" id="res"><div class="tipo" id="rTipo"></div><div class="hora" id="rHora"></div><div id="rNombre"></div></div>
+        <div id="rAvisos" class="lista"></div>
+        <div class="nota" id="rDet"></div>
+        <button type="button" id="bListo">Listo</button>
+      </div>
+    </section>
+
+    <!-- PERMISOS -->
+    <section id="t-permisos" hidden>
+      <form id="fPermiso" class="card">
+        <label>Tipo
+          <select id="pTipo">
+            <option>Permiso por horas (Art. 39)</option>
+            <option>Justificación de ausencia o atraso (Art. 38)</option>
+            <option>Enfermedad con certificado médico (Art. 56 num. 9)</option>
+            <option>Calamidad doméstica (Art. 37 d)</option>
+            <option>Matrimonio (Art. 37 b)</option>
+            <option>Maternidad o paternidad (Art. 37 a)</option>
+            <option>Capacitación autorizada (Art. 37 c)</option>
+            <option>Vacaciones (Art. 34 a 36)</option>
+          </select>
+        </label>
+        <div class="msg info" id="pRegla"></div>
+        <div class="row2">
+          <label>Desde<input id="pDesde" type="date"></label>
+          <label>Hasta<input id="pHasta" type="date"></label>
+        </div>
+        <label class="check" id="pTodoBox"><input id="pTodo" type="checkbox" checked> Todo el día</label>
+        <div class="row2" id="pHoras" hidden>
+          <label>Hora desde<input id="pHd" type="time" value="08:30"></label>
+          <label>Hora hasta<input id="pHh" type="time" value="10:00"></label>
+        </div>
+        <label>Motivo<textarea id="pMotivo" maxlength="500" placeholder="Explique brevemente el motivo"></textarea></label>
+        <button type="submit" class="huella" id="bPermiso"><span id="bPermisoTxt">Enviar solicitud con huella</span></button>
+        <div class="nota">La solicitud llega a Talento Humano. Recibirá la respuesta por correo.</div>
+        <div id="errPermiso" class="msg err" hidden></div>
+        <div id="okPermiso" class="msg okm" hidden></div>
+      </form>
+    </section>
+
+    <!-- HISTORIAL -->
+    <section id="t-historial" hidden>
+      <div class="card">
+        <button type="button" id="bHist" class="huella">Ver mi historial con huella</button>
+        <div id="errHist" class="msg err" hidden></div>
+        <div id="hist" class="stat" hidden></div>
+      </div>
+    </section>
+
+    <p class="nota" style="margin-top:16px">Consejo: en el menú del navegador elija <b>Agregar a pantalla de inicio</b> para abrir la app con un toque.</p>
+  </div>
+</div>
+
+<script>
+  // ▼▼▼ Pegue aquí la URL de su aplicación web de Apps Script (termina en /exec) ▼▼▼
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwWnuN5Mz_1i_U6JB-BqnRjPGLs0rllZi5E_1I5BshQBrvA53l2_dm-PjzeywC84S86Rw/exec';
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+  const ls = {
+    get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+    set(k,v){ try { localStorage.setItem(k,v); } catch(e){} },
+    del(k){ try { localStorage.removeItem(k); } catch(e){} }
+  };
+  const aB64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const deB64 = s => { s = s.replace(/-/g,'+').replace(/_/g,'/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+
+  // Código de la oficina: llega por el QR y queda guardado en este celular
+  let CODIGO = new URLSearchParams(location.search).get('t') || '';
+  if (CODIGO) ls.set('asis_codigo', CODIGO); else CODIGO = ls.get('asis_codigo') || '';
+
+  (async function iniciar() {
+    if (!CODIGO) { $('sinQR').hidden = false; return; }
+    let ok = false;
+    try { ok = !!window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch (e) {}
+    if (!ok) { $('sinHuella').hidden = false; return; }
+    $('app').hidden = false;
+    const ced = ls.get('asis_cedula');
+    if (ced) { $('cedula').value = ced; $('cedula').readOnly = true; $('cambiar').hidden = false; }
+    const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    $('pDesde').value = hoy; $('pHasta').value = hoy;
+    reglaPermiso();
+  })();
+
+  $('cambiar').onclick = () => { ls.del('asis_cedula'); $('cedula').readOnly = false; $('cedula').value = ''; $('cambiar').hidden = true; $('vincBox').hidden = true; $('cedula').focus(); };
+
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    ['marcar', 'permisos', 'historial'].forEach(t => $('t-' + t).hidden = t !== b.dataset.tab);
+  });
+
+  // ── Comunicación con el servidor y con el lector de huella
+  async function api(datos) {
+    const r = await fetch(API_URL, { method:'POST', body: JSON.stringify(datos) });
+    if (!r.ok) throw new Error('El servidor respondió ' + r.status + '. Intente de nuevo.');
+    return r.json();
+  }
+  function ubicacion() {
+    return new Promise((ok, fail) => {
+      if (!navigator.geolocation) return fail(new Error('Este navegador no permite obtener la ubicación.'));
+      navigator.geolocation.getCurrentPosition(p => ok(p.coords), err => {
+        const m = { 1:'Permita el acceso a la ubicación para poder registrar.', 2:'No se pudo obtener la ubicación. Active el GPS.', 3:'El GPS tardó demasiado. Intente de nuevo.' };
+        fail(new Error(m[err.code] || 'No se pudo obtener la ubicación.'));
+      }, { enableHighAccuracy:true, timeout:20000, maximumAge:0 });
+    });
+  }
+  function errorHuella(e) {
+    if (e && e.name === 'NotAllowedError') return 'La huella se canceló, no fue reconocida o este no es el celular vinculado a su cédula.';
+    if (e && e.name === 'InvalidStateError') return 'Este celular ya tiene una huella vinculada para esta cédula. Pida a Talento Humano que la desvincule.';
+    return (e && e.message) || 'No se pudo leer la huella.';
+  }
+  async function leerHuella(d) {
+    try {
+      const a = await navigator.credentials.get({ publicKey: {
+        challenge: deB64(d.desafio), allowCredentials: [{ type:'public-key', id: deB64(d.credId), transports:['internal'] }],
+        userVerification: 'required', timeout: 60000 }});
+      return { credId: aB64(a.rawId), clientDataJSON: aB64(a.response.clientDataJSON), authenticatorData: aB64(a.response.authenticatorData), signature: aB64(a.response.signature) };
+    } catch (e) { throw new Error(errorHuella(e)); }
+  }
+  function cedula() {
+    const c = $('cedula').value.trim();
+    if (!c) throw new Error('Ingrese su cédula.');
+    return c;
+  }
+  function manejarCodigo(r) {
+    if (r && r.codigoInvalido) { ls.del('asis_codigo'); $('app').hidden = true; $('sinQR').hidden = false; return true; }
+    return false;
+  }
+
+  // ── MARCAR
+  function ocuparM(t) { document.querySelectorAll('#fMarcar button').forEach(b => b.disabled = true); $('bMarcarTxt').textContent = t; $('errMarcar').hidden = true; }
+  function liberarM(err) {
+    document.querySelectorAll('#fMarcar button').forEach(b => b.disabled = false);
+    $('bMarcarTxt').textContent = $('vincBox').hidden ? 'Registrar marca con huella' : 'Vincular huella y registrar';
+    if (err) { $('errMarcar').textContent = err; $('errMarcar').hidden = false; }
+  }
+
+  $('fMarcar').addEventListener('submit', ev => { ev.preventDefault(); marcar(''); });
+  document.querySelectorAll('[data-especial]').forEach(b => b.onclick = () => marcar(b.dataset.especial));
+
+  async function marcar(especial) {
+    try {
+      const ced = cedula();
+      const vinculando = !$('vincBox').hidden;
+      const motivo = $('motivo').value.trim();
+      const pin = $('pin').value.trim();
+      if (vinculando && !pin) throw new Error('Ingrese el PIN para vincular su huella.');
+      ocuparM('Obteniendo ubicación…');
+      const c = await ubicacion();
+      const base = { codigo: CODIGO, cedula: ced, lat: c.latitude, lng: c.longitude, acc: c.accuracy, especial };
+      $('estMarcar').textContent = 'Ubicación: ' + c.latitude.toFixed(5) + ', ' + c.longitude.toFixed(5) + ' (±' + Math.round(c.accuracy) + ' m)';
+      ocuparM('Verificando…');
+      const d = await api({ ...base, accion:'desafio', para:'marcar' });
+      if (!d.ok) { if (manejarCodigo(d)) return; return liberarM(d.mensaje); }
+      if (d.oficina) $('oficina').textContent = d.oficina;
+      if (d.requiereMotivo && motivo.length < 5) { pedirMotivo(d.requiereMotivo); return; }
+
+      let r;
+      if (!d.vinculada) {
+        if (especial) return liberarM('Primero registre su INGRESO para vincular su huella.');
+        if (!vinculando) { $('vincNombre').textContent = d.nombre; $('vincBox').hidden = false; liberarM(); $('pin').focus(); return; }
+        ocuparM('Ponga su dedo en el lector…');
+        let cred;
+        try {
+          cred = await navigator.credentials.create({ publicKey: {
+            challenge: deB64(d.desafio), rp: { name: d.oficina || 'Asistencia' },
+            user: { id: new TextEncoder().encode(ced), name: ced, displayName: d.nombre },
+            pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+            authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required', residentKey:'discouraged' },
+            attestation:'none', timeout:60000 }});
+        } catch (e) { return liberarM(errorHuella(e)); }
+        ocuparM('Registrando ' + d.siguiente + '…');
+        const pk = cred.response.getPublicKey ? cred.response.getPublicKey() : null;
+        r = await api({ ...base, accion:'vincular', pin, motivo, credId: aB64(cred.rawId), publicKey: pk ? aB64(pk) : '', clientDataJSON: aB64(cred.response.clientDataJSON) });
+      } else {
+        ocuparM(d.siguiente + ': ponga su dedo…');
+        const h = await leerHuella(d);
+        ocuparM('Registrando ' + d.siguiente + '…');
+        r = await api({ ...base, accion:'marcar', motivo, ...h });
+      }
+      if (!r.ok) { if (manejarCodigo(r)) return; if (r.requiereMotivo) return pedirMotivo(r.requiereMotivo); return liberarM(r.mensaje); }
+      $('motivoBox').hidden = true; $('motivo').value = '';
+      ls.set('asis_cedula', ced); $('cedula').readOnly = true; $('cambiar').hidden = false; $('vincBox').hidden = true; $('pin').value = '';
+      mostrarMarca(r);
+      liberarM();
+    } catch (e) { liberarM(e.message || 'Sin conexión. Revise su internet e intente de nuevo.'); }
+  }
+
+  function pedirMotivo(texto) {
+    $('motivoTxt').textContent = texto; $('motivoBox').hidden = false; liberarM(); $('motivo').focus();
+    $('bMarcarTxt').textContent = 'Registrar salida con motivo';
+  }
+
+  function mostrarMarca(r) {
+    $('fMarcar').hidden = true; $('okMarcar').hidden = false;
+    $('rAlerta').hidden = !r.alerta;
+    if (r.alerta) $('rAlerta').innerHTML = esc(r.alerta) + '<small>' + r.minutos + ' minutos' + (r.horario ? ' · su horario: ' + esc(r.horario) : '') + '</small>';
+    $('res').className = 'res ' + (r.alerta ? 'bad' : (/SALIDA/.test(r.tipo) ? 'out' : 'in'));
+    $('rTipo').textContent = r.tipo; $('rHora').textContent = r.hora; $('rNombre').textContent = r.nombre;
+    const av = [];
+    if (r.motivo) av.push(['info', 'Motivo registrado: ' + r.motivo]);
+    if (r.justificacion) av.push(['okm', 'Cubierto por ' + r.justificacion]);
+    if (!r.novedad && !r.justificacion) av.push(['okm', r.tipo === 'INGRESO' ? 'Llegó a tiempo' : 'Dentro del horario']);
+    const ds = r.disciplina;
+    if (ds) {
+      av.push(['info', 'Atrasos sin justificar esta semana: ' + ds.atrasosSemana + '. Cada ' + ds.porLlamado + ' genera un llamado de atención.']);
+      if (ds.llamado) av.push(['err', 'Se registró un llamado de atención por escrito (N° ' + ds.llamado.numeroMes + ' del mes). Talento Humano le entregará el documento para su firma.']);
+      if (ds.despido) av.push(['err', 'Acumula ' + ds.llamadosMes + ' llamados de atención. Talento Humano revisará su caso.']);
+    }
+    $('rAvisos').innerHTML = av.map(a => '<div class="msg ' + a[0] + '">' + esc(a[1]) + '</div>').join('');
+    $('rDet').textContent = r.fecha + ' · ' + r.distancia + ' m de la oficina · ' + r.verificacion +
+      (r.siguiente ? ' · Próxima marca: ' + r.siguiente : '') + (r.notificaciones.length ? ' · ' + r.notificaciones.join(', ') : '');
+  }
+  $('bListo').onclick = () => { $('okMarcar').hidden = true; $('fMarcar').hidden = false; $('estMarcar').textContent = 'Se verificará que esté en la oficina y luego se le pedirá la huella.'; };
+
+  // ── PERMISOS
+  const REGLAS = {
+    'Permiso por horas (Art. 39)': 'Máximo 3 horas al mes. Se recuperan el mismo día o en esa semana; si no, se descuenta el tiempo. Al salir y volver, marque "Salida con permiso" y "Regreso de permiso".',
+    'Justificación de ausencia o atraso (Art. 38)': 'Se presenta dentro de las 24 horas. Puede ser de hoy o de ayer.',
+    'Enfermedad con certificado médico (Art. 56 num. 9)': 'Entregue el certificado del IESS o de un centro autorizado a Talento Humano. Dentro de las 24 horas.',
+    'Calamidad doméstica (Art. 37 d)': 'Hasta 3 días laborables, debidamente comprobada.',
+    'Matrimonio (Art. 37 b)': 'Hasta 3 días laborables. Presente el certificado de matrimonio a su regreso.',
+    'Maternidad o paternidad (Art. 37 a)': 'Según los días que fija el Código del Trabajo.',
+    'Capacitación autorizada (Art. 37 c)': 'Solo para eventos autorizados por la Asociación.',
+    'Vacaciones (Art. 34 a 36)': '15 días al año. Fechas acordadas con su jefe. Entregue sus pendientes antes de salir.',
+  };
+  function reglaPermiso() {
+    const t = $('pTipo').value, horas = /Art\. 39/.test(t);
+    $('pRegla').textContent = REGLAS[t] || '';
+    $('pTodoBox').hidden = horas;
+    if (horas) { $('pTodo').checked = false; $('pHasta').value = $('pDesde').value; }
+    $('pHoras').hidden = $('pTodo').checked;
+    $('pHasta').disabled = horas;
+  }
+  $('pTipo').onchange = reglaPermiso;
+  $('pTodo').onchange = reglaPermiso;
+  $('pDesde').onchange = () => { if ($('pHasta').disabled || $('pHasta').value < $('pDesde').value) $('pHasta').value = $('pDesde').value; };
+
+  $('fPermiso').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    $('errPermiso').hidden = true; $('okPermiso').hidden = true;
+    const b = $('bPermiso');
+    try {
+      const ced = cedula();
+      const s = { tipo: $('pTipo').value, desde: $('pDesde').value, hasta: $('pHasta').value, todoElDia: $('pTodo').checked,
+                  horaDesde: $('pHd').value, horaHasta: $('pHh').value, motivo: $('pMotivo').value };
+      if (!s.motivo.trim()) throw new Error('Explique brevemente el motivo.');
+      b.disabled = true; $('bPermisoTxt').textContent = 'Verificando…';
+      const d = await api({ accion:'desafio', para:'permiso', codigo: CODIGO, cedula: ced });
+      if (!d.ok) { if (manejarCodigo(d)) return; throw new Error(d.mensaje); }
+      $('bPermisoTxt').textContent = 'Ponga su dedo en el lector…';
+      const h = await leerHuella(d);
+      $('bPermisoTxt').textContent = 'Enviando…';
+      const r = await api({ accion:'permiso', codigo: CODIGO, cedula: ced, solicitud: s, ...h });
+      if (!r.ok) throw new Error(r.mensaje);
+      $('okPermiso').innerHTML = 'Solicitud <b>' + esc(r.id) + '</b> enviada. Estado: PENDIENTE.' + (r.aviso ? '<br>' + esc(r.aviso) : '');
+      $('okPermiso').hidden = false; $('pMotivo').value = '';
+      pintarHistorial(r.resumen);
+    } catch (e) { $('errPermiso').textContent = e.message; $('errPermiso').hidden = false; }
+    finally { b.disabled = false; $('bPermisoTxt').textContent = 'Enviar solicitud con huella'; }
+  });
+
+  // ── HISTORIAL
+  $('bHist').onclick = async () => {
+    $('errHist').hidden = true;
+    const b = $('bHist');
+    try {
+      const ced = cedula();
+      b.disabled = true; b.textContent = 'Verificando…';
+      const d = await api({ accion:'desafio', para:'consulta', codigo: CODIGO, cedula: ced });
+      if (!d.ok) { if (manejarCodigo(d)) return; throw new Error(d.mensaje); }
+      b.textContent = 'Ponga su dedo en el lector…';
+      const h = await leerHuella(d);
+      const r = await api({ accion:'consulta', codigo: CODIGO, cedula: ced, ...h });
+      if (!r.ok) throw new Error(r.mensaje);
+      pintarHistorial(r.resumen);
+    } catch (e) { $('errHist').textContent = e.message; $('errHist').hidden = false; }
+    finally { b.disabled = false; b.textContent = 'Actualizar mi historial con huella'; }
+  };
+
+  function medidor(n, max) {
+    let s = '<div class="medidor" style="--n:' + max + '">';
+    for (let i = 0; i < max; i++) s += '<i class="' + (i < n ? 'on' : '') + '"></i>';
+    return s + '</div>';
+  }
+  function pintarHistorial(z) {
+    if (!z) return;
+    const h = [];
+    if (/DESPIDO/.test(z.estadoLaboral)) h.push('<div class="msg err">Estado: ' + esc(z.estadoLaboral) + '</div>');
+    h.push('<div class="stat"><h3>Atrasos sin justificar esta semana</h3><b>' + z.atrasosSinJustificar + ' de ' + z.porLlamado +
+      ' para un llamado de atención</b>' + medidor(z.atrasosSinJustificar % z.porLlamado || (z.atrasosSinJustificar ? z.porLlamado : 0), z.porLlamado) +
+      '<span class="nota">Semana del ' + esc(z.semanaDel) + ' · Hora de ingreso ' + esc(z.horaEntrada) + '</span></div>');
+    h.push('<div class="stat"><h3>Llamados de atención este mes</h3><b>' + z.llamadosMes + ' de ' + z.paraDespido + '</b>' +
+      medidor(Math.min(z.llamadosMes, z.paraDespido), z.paraDespido) + '<span class="nota">En los últimos 90 días: ' + z.llamados90 + ' (Art. 64)</span></div>');
+    h.push('<div class="stat"><h3>Horas de permiso este mes</h3><b>' + z.horasPermisoMes + ' de ' + z.horasPermisoMax + ' h (Art. 39)</b></div>');
+    h.push('<div class="stat"><h3>Hoy</h3><div class="lista">' + (z.hoy.length ? z.hoy.map(m => '<div class="item"><span>' + esc(m.tipo) + '</span><span>' + esc(m.hora) + '</span></div>').join('') : '<span class="nota">Sin marcas todavía.</span>') + '</div></div>');
+    if (z.semana.length) h.push('<div class="stat"><h3>Novedades de la semana</h3><div class="lista">' + z.semana.map(a =>
+      '<div class="item"><span>' + esc(a.fecha + ' ' + a.hora + ' · ' + a.novedad + ' ' + a.min + ' min') + '</span><span class="chip ' + (a.just ? 'ok' : 'bad') + '">' + (a.just ? 'Justificado' : 'Sin justificar') + '</span></div>').join('') + '</div></div>');
+    if (z.novedadesMes.length) h.push('<div class="stat"><h3>Ausencias y marcas incompletas del mes</h3><div class="lista">' + z.novedadesMes.map(n =>
+      '<div class="item"><span>' + esc(n.fecha + ' · ' + n.novedad) + '</span><span class="chip ' + (n.estado === 'JUSTIFICADO' ? 'ok' : 'bad') + '">' + esc(n.estado) + '</span></div>').join('') + '</div></div>');
+    h.push('<div class="stat"><h3>Mis solicitudes</h3><div class="lista">' + (z.permisos.length ? z.permisos.map(p =>
+      '<div class="item"><span>' + esc(p.id + ' · ' + p.tipo.replace(/ \(.*\)/, '') + ' · ' + (p.desde === p.hasta ? p.desde : p.desde + ' al ' + p.hasta) + (p.horaDesde ? ' ' + p.horaDesde + '–' + p.horaHasta : '')) +
+      (p.obs ? '<br><span class="nota">' + esc(p.obs) + '</span>' : '') + '</span><span class="chip ' + esc(p.estado) + '">' + esc(p.estado) + '</span></div>').join('') : '<span class="nota">No tiene solicitudes.</span>') + '</div></div>');
+    $('hist').innerHTML = h.join(''); $('hist').hidden = false;
+  }
+</script>
+</body>
+</html>
