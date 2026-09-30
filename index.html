@@ -72,7 +72,7 @@
     <div class="msg err">La primera vez debe escanear el QR impreso en la oficina. Después podrá usar el acceso directo en su celular.</div>
   </div>
   <div id="sinHuella" class="card" hidden>
-    <div class="msg err">Este celular no tiene lector de huella activo o el navegador no lo permite. Registre una huella en los ajustes del celular y abra esta página en Chrome (Android) o Safari (iPhone).</div>
+    <div class="msg err">Este celular no tiene activada la huella ni el reconocimiento de rostro, o el navegador no lo permite. En Android active la huella en Ajustes → Seguridad y use Chrome. En iPhone active Face ID (o Touch ID) en Ajustes → Face ID y código, y use Safari.</div>
   </div>
 
   <div id="app" hidden>
@@ -92,7 +92,7 @@
       <form id="fMarcar" class="card">
         <div class="horario"><span><b>08:30</b>Ingreso</span><span><b>12:30 – 13:30</b>Almuerzo</span><span><b>17:30</b>Salida</span></div>
         <div id="vincBox" hidden>
-          <div class="msg info" style="margin-bottom:10px">Primera vez en este celular: <b id="vincNombre"></b>, ingrese el PIN que le dio Talento Humano para vincular su huella.</div>
+          <div class="msg info" style="margin-bottom:10px">Primera vez en este celular: <b id="vincNombre"></b>, ingrese el PIN que le dio Talento Humano para vincular su celular.</div>
           <label>PIN para vincular<input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="8"></label>
         </div>
         <div id="motivoBox" hidden>
@@ -101,14 +101,14 @@
         </div>
         <button id="bMarcar" type="submit" class="huella">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6.5 4.8A9 9 0 0 1 20.5 11"/><path d="M3.5 9.5a9 9 0 0 1 1.3-2.7"/><path d="M8 20.5c.8-1.7 1.3-3.7 1.3-5.8a2.7 2.7 0 0 1 5.4 0c0 .7 0 1.4-.1 2"/><path d="M5.5 18.3A11.6 11.6 0 0 0 6.6 14.7a5.4 5.4 0 0 1 10.8 0c0 2-.3 3.9-.9 5.6"/><path d="M12 14.7c0 2.8-.8 5.3-2.2 7.3"/><path d="M20.4 15.8c.1-.4.1-.7.1-1.1"/></svg>
-          <span id="bMarcarTxt">Registrar marca con huella</span>
+          <span id="bMarcarTxt">Registrar marca</span>
         </button>
         <div class="row2">
           <button type="button" class="sec" data-especial="SALIDA CON PERMISO">Salida con permiso</button>
           <button type="button" class="sec" data-especial="REGRESO DE PERMISO">Regreso de permiso</button>
         </div>
         <div class="nota">Use estos dos botones solo si tiene un permiso por horas aprobado para hoy (Art. 30).</div>
-        <div class="nota" id="estMarcar">Se verificará que esté en la oficina y luego se le pedirá la huella.</div>
+        <div class="nota" id="estMarcar">Se verificará que esté en la oficina y luego se le pedirá su huella o Face ID.</div>
         <div id="errMarcar" class="msg err" hidden></div>
       </form>
 
@@ -147,7 +147,7 @@
           <label>Hora hasta<input id="pHh" type="time" value="10:00"></label>
         </div>
         <label>Motivo<textarea id="pMotivo" maxlength="500" placeholder="Explique brevemente el motivo"></textarea></label>
-        <button type="submit" class="huella" id="bPermiso"><span id="bPermisoTxt">Enviar solicitud con huella</span></button>
+        <button type="submit" class="huella" id="bPermiso"><span id="bPermisoTxt">Enviar solicitud</span></button>
         <div class="nota">La solicitud llega a Talento Humano. Recibirá la respuesta por correo.</div>
         <div id="errPermiso" class="msg err" hidden></div>
         <div id="okPermiso" class="msg okm" hidden></div>
@@ -157,7 +157,7 @@
     <!-- HISTORIAL -->
     <section id="t-historial" hidden>
       <div class="card">
-        <button type="button" id="bHist" class="huella">Ver mi historial con huella</button>
+        <button type="button" id="bHist" class="huella">Ver mi historial</button>
         <div id="errHist" class="msg err" hidden></div>
         <div id="hist" class="stat" hidden></div>
       </div>
@@ -173,6 +173,10 @@
   // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
   const $ = id => document.getElementById(id);
+  // Android pide la huella; iPhone pide Face ID (o Touch ID en el iPhone SE)
+  const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const BIO = IOS ? 'Face ID' : 'huella';
+  const ACCION = IOS ? 'Confirme con Face ID…' : 'Ponga su dedo en el lector…';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
   const ls = {
     get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
@@ -192,6 +196,10 @@
     try { ok = !!window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable(); } catch (e) {}
     if (!ok) { $('sinHuella').hidden = false; return; }
     $('app').hidden = false;
+    $('bMarcarTxt').textContent = 'Registrar marca con ' + BIO;
+    $('bPermisoTxt').textContent = 'Enviar solicitud con ' + BIO;
+    $('bHist').textContent = 'Ver mi historial con ' + BIO;
+    $('estMarcar').textContent = 'Se verificará que esté en la oficina y luego se le pedirá su ' + BIO + '.';
     const ced = ls.get('asis_cedula');
     if (ced) { $('cedula').value = ced; $('cedula').readOnly = true; $('cambiar').hidden = false; }
     const hoy = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -222,9 +230,9 @@
     });
   }
   function errorHuella(e) {
-    if (e && e.name === 'NotAllowedError') return 'La huella se canceló, no fue reconocida o este no es el celular vinculado a su cédula.';
-    if (e && e.name === 'InvalidStateError') return 'Este celular ya tiene una huella vinculada para esta cédula. Pida a Talento Humano que la desvincule.';
-    return (e && e.message) || 'No se pudo leer la huella.';
+    if (e && e.name === 'NotAllowedError') return 'La ' + (IOS ? 'confirmación con Face ID' : 'huella') + ' se canceló, no fue reconocida o este no es el celular vinculado a su cédula.';
+    if (e && e.name === 'InvalidStateError') return 'Este celular ya está vinculado a esta cédula. Pida a Talento Humano que lo desvincule.';
+    return (e && e.message) || 'No se pudo confirmar su ' + BIO + '.';
   }
   async function leerHuella(d) {
     try {
@@ -248,7 +256,7 @@
   function ocuparM(t) { document.querySelectorAll('#fMarcar button').forEach(b => b.disabled = true); $('bMarcarTxt').textContent = t; $('errMarcar').hidden = true; }
   function liberarM(err) {
     document.querySelectorAll('#fMarcar button').forEach(b => b.disabled = false);
-    $('bMarcarTxt').textContent = $('vincBox').hidden ? 'Registrar marca con huella' : 'Vincular huella y registrar';
+    $('bMarcarTxt').textContent = $('vincBox').hidden ? 'Registrar marca con ' + BIO : 'Vincular celular y registrar';
     if (err) { $('errMarcar').textContent = err; $('errMarcar').hidden = false; }
   }
 
@@ -261,7 +269,7 @@
       const vinculando = !$('vincBox').hidden;
       const motivo = $('motivo').value.trim();
       const pin = $('pin').value.trim();
-      if (vinculando && !pin) throw new Error('Ingrese el PIN para vincular su huella.');
+      if (vinculando && !pin) throw new Error('Ingrese el PIN para vincular su celular.');
       ocuparM('Obteniendo ubicación…');
       const c = await ubicacion();
       const base = { codigo: CODIGO, cedula: ced, lat: c.latitude, lng: c.longitude, acc: c.accuracy, especial };
@@ -274,9 +282,9 @@
 
       let r;
       if (!d.vinculada) {
-        if (especial) return liberarM('Primero registre su INGRESO para vincular su huella.');
+        if (especial) return liberarM('Primero registre su INGRESO para vincular su celular.');
         if (!vinculando) { $('vincNombre').textContent = d.nombre; $('vincBox').hidden = false; liberarM(); $('pin').focus(); return; }
-        ocuparM('Ponga su dedo en el lector…');
+        ocuparM(ACCION);
         let cred;
         try {
           cred = await navigator.credentials.create({ publicKey: {
@@ -290,7 +298,7 @@
         const pk = cred.response.getPublicKey ? cred.response.getPublicKey() : null;
         r = await api({ ...base, accion:'vincular', pin, motivo, credId: aB64(cred.rawId), publicKey: pk ? aB64(pk) : '', clientDataJSON: aB64(cred.response.clientDataJSON) });
       } else {
-        ocuparM(d.siguiente + ': ponga su dedo…');
+        ocuparM(d.siguiente + ': ' + ACCION.toLowerCase());
         const h = await leerHuella(d);
         ocuparM('Registrando ' + d.siguiente + '…');
         r = await api({ ...base, accion:'marcar', motivo, ...h });
@@ -328,7 +336,7 @@
     $('rDet').textContent = r.fecha + ' · ' + r.distancia + ' m de la oficina · ' + r.verificacion +
       (r.siguiente ? ' · Próxima marca: ' + r.siguiente : '') + (r.notificaciones.length ? ' · ' + r.notificaciones.join(', ') : '');
   }
-  $('bListo').onclick = () => { $('okMarcar').hidden = true; $('fMarcar').hidden = false; $('estMarcar').textContent = 'Se verificará que esté en la oficina y luego se le pedirá la huella.'; };
+  $('bListo').onclick = () => { $('okMarcar').hidden = true; $('fMarcar').hidden = false; $('estMarcar').textContent = 'Se verificará que esté en la oficina y luego se le pedirá su ' + BIO + '.'; };
 
   // ── PERMISOS
   const REGLAS = {
@@ -365,7 +373,7 @@
       b.disabled = true; $('bPermisoTxt').textContent = 'Verificando…';
       const d = await api({ accion:'desafio', para:'permiso', codigo: CODIGO, cedula: ced });
       if (!d.ok) { if (manejarCodigo(d)) return; throw new Error(d.mensaje); }
-      $('bPermisoTxt').textContent = 'Ponga su dedo en el lector…';
+      $('bPermisoTxt').textContent = ACCION;
       const h = await leerHuella(d);
       $('bPermisoTxt').textContent = 'Enviando…';
       const r = await api({ accion:'permiso', codigo: CODIGO, cedula: ced, solicitud: s, ...h });
@@ -374,7 +382,7 @@
       $('okPermiso').hidden = false; $('pMotivo').value = '';
       pintarHistorial(r.resumen);
     } catch (e) { $('errPermiso').textContent = e.message; $('errPermiso').hidden = false; }
-    finally { b.disabled = false; $('bPermisoTxt').textContent = 'Enviar solicitud con huella'; }
+    finally { b.disabled = false; $('bPermisoTxt').textContent = 'Enviar solicitud con ' + BIO; }
   });
 
   // ── HISTORIAL
@@ -386,13 +394,13 @@
       b.disabled = true; b.textContent = 'Verificando…';
       const d = await api({ accion:'desafio', para:'consulta', codigo: CODIGO, cedula: ced });
       if (!d.ok) { if (manejarCodigo(d)) return; throw new Error(d.mensaje); }
-      b.textContent = 'Ponga su dedo en el lector…';
+      b.textContent = ACCION;
       const h = await leerHuella(d);
       const r = await api({ accion:'consulta', codigo: CODIGO, cedula: ced, ...h });
       if (!r.ok) throw new Error(r.mensaje);
       pintarHistorial(r.resumen);
     } catch (e) { $('errHist').textContent = e.message; $('errHist').hidden = false; }
-    finally { b.disabled = false; b.textContent = 'Actualizar mi historial con huella'; }
+    finally { b.disabled = false; b.textContent = 'Actualizar mi historial con ' + BIO; }
   };
 
   function medidor(n, max) {
